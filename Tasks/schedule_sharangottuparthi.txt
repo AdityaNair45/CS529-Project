@@ -1,0 +1,6 @@
+Tast 1:
+
+1) Meeting with the client and discuss more about the project.(2)
+2)Understand the dataset and make the required changes in it(like data cleaning).(3)
+3) Desiging the user interface page.(4)
+4)Understanding the dataflow for the visualization.(3)
