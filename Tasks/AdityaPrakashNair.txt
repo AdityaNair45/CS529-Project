@@ -1,0 +1,4 @@
+Task 1:
+  1) Understand the project requirements and deliverables.
+  2) Develop the design flow (flowchart) of the project.
+  3) Develop a wireframe/paint design of the frontend view.
