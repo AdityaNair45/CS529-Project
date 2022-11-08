@@ -4,22 +4,32 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <link rel="stylesheet" href="css/global.css" />
     <link rel="stylesheet" href="css/home.css" />
+
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://unpkg.com/topojson@3"></script>
+
+    <script src="index.js"></script>
     <title>CS 529 Project</title>
   </head>
-  <body>
-    <div class="card">
-        <h2>Map</h2>
-    </div>
+  <body onload="loadMap()">
+    <!-- <div class="card"> -->
+        <!-- <h2>Map</h2> -->
+        <svg
+          id="chicagoMap"
+          style="width: 800px; height: 750px; border: 1px solid black"
+        ></svg>
+    <!-- </div> -->
     <br>
-    <div class="viz-cards">
+    <!-- <div class="viz-cards">
     <div class="card">
         <h2>Race Distribution</h2>
     </div>
     <div class="card">
         <h2>Resources Distribution</h2>
-    </div>
+    </div> -->
 </div>
   </body>
 </html>

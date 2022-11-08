@@ -6,3 +6,7 @@
     margin: 0 auto;
     text-align: center;
 }
+
+#chicagoMap .active {
+    fill: orange;
+  }
