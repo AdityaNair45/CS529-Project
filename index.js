@@ -392,9 +392,9 @@ const renderResourceDistribution = (selectedCommunityId) => {
 
     data = selectedCommunity[0];
 
-    temp = Object.values(data).slice(11,15)
-    min = Math.min.apply(Math, temp)   
-    max = Math.max.apply(Math, temp)
+    var temp = Object.values(data).slice(11,15)
+    var min = Math.min.apply(Math, temp)   
+    var max = Math.max.apply(Math, temp)
     keys = ['Hospital','School','Train','Bus']
 
    const r = 200
