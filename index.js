@@ -464,3 +464,4 @@ const renderResourceDistribution = (selectedCommunityId) => {
 
 
     };
+ 
