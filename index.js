@@ -10,6 +10,7 @@ let center_x = -87.7;
 let center_y = 41.825;
 let svg;
 let raceSvg;
+let resourceSvg;
 let projection = d3
   .geoMercator()
   .scale(mapWidth * 75)
@@ -382,7 +383,9 @@ const rad2deg = (angle) => {
 
 const renderResourceDistribution = (selectedCommunityId) => {
   
-  svg.selectAll("g").remove();
+   if (raceSvg) {
+    raceSvg.selectAll("*").remove();
+  }
     let selectedCommunity = chicagoRaceData.filter(
       (d) => d.COMMAREA == selectedCommunityId
     );
@@ -397,8 +400,8 @@ const renderResourceDistribution = (selectedCommunityId) => {
    const r = 200
   const margin = { left: 30, top: 30, right: 30, bottom: 30 }
 
-  svg = d3.select('#resourceVisualization');
-    svg.attr('viewBox',
+  resourceSvg = d3.select('#resourceVisualization');
+    resourceSvg.attr('viewBox',
       `-${margin.left},
       -${margin.top},
       ${r * 2 + margin.left + margin.right},
@@ -419,7 +422,7 @@ const renderResourceDistribution = (selectedCommunityId) => {
 
   dimensions.forEach((dimension, i) => {
 
-    const g = svg.append('g')
+    const g = resourceSvg.append('g')
       .attr('transform', `translate(${r}, ${r}) rotate(${i * 90})`)
 
 
@@ -435,7 +438,7 @@ const renderResourceDistribution = (selectedCommunityId) => {
   })
   
 
-  svg.append('g')
+  resourceSvg.append('g')
     .selectAll('path')
     .data([data])
     .enter()
@@ -453,7 +456,7 @@ const renderResourceDistribution = (selectedCommunityId) => {
       .attr('stroke-width', 5)
       .attr('fill', 'rgba(70, 130, 180, 0.3)')
   
-  svg.append('g')
+  resourceSvg.append('g')
     .selectAll('path')
     .data(ticks)
     .enter()
