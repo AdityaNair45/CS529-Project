@@ -17,7 +17,8 @@
   <body onload="loadAllFiles()">
     <!-- <div class="card"> -->
         <!-- <h2>Map</h2> -->
-        <div>
+        <div style="display:flex;justify-content:space-between">
+          <div>
           <label>Category: </label>
           <select id="raceDropdown" onchange="onCategoryChange()">
             <option value="White">White</option>
@@ -29,12 +30,20 @@
             <option value="Other">Other</option>
             <option value="Population">Total Population</option>
           </select>
+          <br><br>
+          <svg
+            id="chicagoMap"
+            style="width: 800px; height: 750px; border: 1px solid black"
+          ></svg>
         </div>
-        <br>
-        <svg
-          id="chicagoMap"
-          style="width: 800px; height: 750px; border: 1px solid black"
-        ></svg>
+        <div style="margin-top: 50px;">
+          <svg
+            id="raceVisualization"
+            style="width: 650px; height: 600px; border: 1px solid black"
+          ></svg>
+        </div>
+      </div>
+
     <!-- </div> -->
     <br>
     <!-- <div class="viz-cards">

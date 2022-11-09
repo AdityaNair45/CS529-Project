@@ -1,16 +1,20 @@
-let width = 800;
-let height = 750;
+let mapWidth = 800;
+let mapHeight = 750;
+let raceVizWidth = 650;
+let raceVizHeight = 600;
+let chartRadius = raceVizHeight / 2 - 40;
 let centered;
 // let center_x = -87.6298;
 // let center_y = 41.8781;
 let center_x = -87.7;
 let center_y = 41.825;
 let svg;
+let raceSvg;
 let projection = d3
   .geoMercator()
-  .scale(width * 75)
+  .scale(mapWidth * 75)
   .center([center_x, center_y])
-  .translate([width / 2, height / 2]);
+  .translate([mapWidth / 2, mapHeight / 2]);
 
 let path = d3.geoPath(projection);
 let chicagoMap;
@@ -24,6 +28,15 @@ let busStopsData;
 let hospitalsData;
 let schoolsData;
 let trainsData;
+
+const PI = Math.PI,
+  arcMinRadius = 10,
+  arcPadding = 20,
+  labelPadding = -5,
+  numTicks = 10;
+
+let numOfArcs, arcWidth;
+const raceVizColor = d3.scaleOrdinal(d3.schemeCategory10);
 
 const loadAllFiles = async () => {
   chicagoCommunityAreaData = await d3.json("data/communityAreas.geojson");
@@ -75,8 +88,8 @@ const zoomOnClick = (d) => {
     k = 8;
     centered = d;
   } else {
-    x = width / 2;
-    y = height / 2;
+    x = mapWidth / 2;
+    y = mapHeight / 2;
     k = 1;
     centered = null;
     svg.selectAll("image").remove();
@@ -96,18 +109,20 @@ const zoomOnClick = (d) => {
     .duration(750)
     .attr(
       "transform",
-      `translate(${width / 2},${height / 2})scale(${k})translate(${-x},${-y})`
+      `translate(${mapWidth / 2},${
+        mapHeight / 2
+      })scale(${k})translate(${-x},${-y})`
     );
 
   const selectedCommunityId = d.properties.area_numbe;
 
   if (addResources) {
     addResourcesToMap(selectedCommunityId, x, y, k);
+    renderRaceDistribution(selectedCommunityId);
   }
 };
 
 const addResourcesToMap = (selectedCommunityId, x, y, k) => {
-
   svg.selectAll("image").remove();
 
   // Get all resources of selected community
@@ -146,7 +161,7 @@ const addResourcesToMap = (selectedCommunityId, x, y, k) => {
     .duration(750)
     .attr(
       "transform",
-      `translate(${width / 2},${height / 2})scale(${
+      `translate(${mapWidth / 2},${mapHeight / 2})scale(${
         k - 2
       })translate(${-x},${-y})`
     );
@@ -170,7 +185,7 @@ const addResourcesToMap = (selectedCommunityId, x, y, k) => {
     .duration(750)
     .attr(
       "transform",
-      `translate(${width / 2},${height / 2})scale(${
+      `translate(${mapWidth / 2},${mapHeight / 2})scale(${
         k - 2
       })translate(${-x},${-y})`
     );
@@ -194,7 +209,7 @@ const addResourcesToMap = (selectedCommunityId, x, y, k) => {
     .duration(750)
     .attr(
       "transform",
-      `translate(${width / 2},${height / 2})scale(${
+      `translate(${mapWidth / 2},${mapHeight / 2})scale(${
         k - 2
       })translate(${-x},${-y})`
     );
@@ -209,7 +224,7 @@ const addResourcesToMap = (selectedCommunityId, x, y, k) => {
     .append("svg:image")
     .attr("width", 5)
     .attr("height", 5)
-    .attr("border-radius",5)
+    .attr("border-radius", 5)
     .attr("xlink:href", "Images/hospitalIcon.JPG")
     .attr("x", (d) => projection([d.Longitude, d.Latitude])[0])
     .attr("y", (d) => projection([d.Longitude, d.Latitude])[1]);
@@ -219,7 +234,7 @@ const addResourcesToMap = (selectedCommunityId, x, y, k) => {
     .duration(750)
     .attr(
       "transform",
-      `translate(${width / 2},${height / 2})scale(${
+      `translate(${mapWidth / 2},${mapHeight / 2})scale(${
         k - 2
       })translate(${-x},${-y})`
     );
@@ -228,4 +243,138 @@ const addResourcesToMap = (selectedCommunityId, x, y, k) => {
 const onCategoryChange = () => {
   selectedRace = document.getElementById("raceDropdown").value;
   loadMap();
+};
+
+const renderRaceDistribution = (selectedCommunityId) => {
+  let selectedCommunity = chicagoRaceData.filter(
+    (d) => d.COMMAREA == selectedCommunityId
+  );
+  selectedCommunity = selectedCommunity[0];
+  const max = Math.max(
+    selectedCommunity["White"],
+    selectedCommunity["Asian"],
+    selectedCommunity["Black"],
+    selectedCommunity["Hispanic"],
+    selectedCommunity["Pacific Islander"],
+    selectedCommunity["Native"],
+    selectedCommunity["Other"]
+  );
+
+  const keys = [
+    "White",
+    "Asian",
+    "Black",
+    "Hispanic",
+    "Pacific Islander",
+    "Native",
+    "Other",
+  ];
+
+  let scale = d3
+    .scaleLinear()
+    .domain([0, max * 1.1])
+    .range([0, 2 * PI]);
+
+  let ticks = scale.ticks(numTicks).slice(0, -1);
+
+  numArcs = keys.length;
+  arcWidth = (chartRadius - arcMinRadius - numArcs * arcPadding) / numArcs;
+
+  let arc = d3
+    .arc()
+    .innerRadius((d, i) => getInnerRadius(i))
+    .outerRadius((d, i) => getOuterRadius(i))
+    .startAngle(0)
+    .endAngle((d, i) => scale(d));
+
+  if (raceSvg) {
+    raceSvg.selectAll("*").remove();
+  }
+  raceSvg = d3
+    .select("#raceVisualization")
+    .attr("width", raceVizWidth)
+    .attr("height", raceVizHeight)
+    .append("g")
+    .attr(
+      "transform",
+      "translate(" + raceVizWidth / 2 + "," + raceVizHeight / 2 + ")"
+    );
+
+  let radialAxis = raceSvg
+    .append("g")
+    .attr("class", "r axis")
+    .selectAll("g")
+    .data(keys)
+    .enter()
+    .append("g");
+
+  radialAxis
+    .append("circle")
+    .attr("r", (d, i) => getOuterRadius(i) + arcPadding)
+    .attr("fill-opacity", 0.2);
+
+  radialAxis
+    .append("text")
+    .attr("x", labelPadding)
+    .attr("y", (d, i) => -getOuterRadius(i) + arcPadding)
+    .text((d) => d);
+
+  let axialAxis = raceSvg
+    .append("g")
+    .attr("class", "a axis")
+    .selectAll("g")
+    .data(ticks)
+    .enter()
+    .append("g")
+    .attr("transform", (d) => "rotate(" + (rad2deg(scale(d)) - 90) + ")");
+
+  axialAxis
+    .append("line")
+    .attr("x2", chartRadius)
+    .attr("stroke-width", 2)
+    .attr("stroke", "black");
+
+  axialAxis
+    .append("text")
+    .attr("x", chartRadius + 10)
+    .style("text-anchor", (d) =>
+      scale(d) >= PI && scale(d) < 2 * PI ? "end" : null
+    )
+    .attr(
+      "transform",
+      (d) =>
+        "rotate(" + (90 - rad2deg(scale(d))) + "," + (chartRadius + 10) + ",0)"
+    )
+    .text((d) => d);
+
+  let arcs = raceSvg
+    .append("g")
+    .attr("class", "data")
+    .selectAll("path")
+    .data(keys)
+    .enter()
+    .append("path")
+    .attr("class", "arc")
+    .style("fill", (d, i) => raceVizColor(i));
+
+  arcs
+    .transition()
+    .delay((d, i) => i * 200)
+    .duration(1000)
+    .attrTween("d", (d, i) => {
+      let interpolate = d3.interpolate(0, selectedCommunity[d]);
+      return (t) => arc(interpolate(t), i);
+    });
+};
+
+const getInnerRadius = (index) => {
+  return arcMinRadius + (numArcs - (index + 1)) * (arcWidth + arcPadding);
+};
+
+const getOuterRadius = (index) => {
+  return getInnerRadius(index) + arcWidth;
+};
+
+const rad2deg = (angle) => {
+  return (angle * 180) / PI;
 };
