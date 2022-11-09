@@ -119,6 +119,7 @@ const zoomOnClick = (d) => {
   if (addResources) {
     addResourcesToMap(selectedCommunityId, x, y, k);
     renderRaceDistribution(selectedCommunityId);
+    renderResourceDistribution(selectedCommunityId);
   }
 };
 
@@ -378,3 +379,88 @@ const getOuterRadius = (index) => {
 const rad2deg = (angle) => {
   return (angle * 180) / PI;
 };
+
+const renderResourceDistribution = (selectedCommunityId) => {
+    let selectedCommunity = chicagoRaceData.filter(
+      (d) => d.COMMAREA == selectedCommunityId
+    );
+
+    data = selectedCommunity[0];
+
+    temp = Object.values(data).slice(11,15)
+    min = Math.min.apply(Math, temp)   
+    max = Math.max.apply(Math, temp)
+    keys = ['Hospital','School','Train','Bus']
+
+   const r = 200
+  const margin = { left: 30, top: 30, right: 30, bottom: 30 }
+
+  svg = d3.select('#resourceVisualization');
+    svg.attr('viewBox',
+      `-${margin.left},
+      -${margin.top},
+      ${r * 2 + margin.left + margin.right},
+      ${r * 2 + margin.bottom + margin.top}`)
+  
+  const dimensions = keys
+  
+
+  const radialLine = d3.lineRadial()
+  
+
+  const yScale = d3.scaleLinear()
+    .range([0, r])
+    .domain([min, max])
+  
+
+  const ticks = [2.5, 5, 7.5, 10]
+
+  dimensions.forEach((dimension, i) => {
+
+    const g = svg.append('g')
+      .attr('transform', `translate(${r}, ${r}) rotate(${i * 90})`)
+
+
+    g.append('g')
+      .call(d3.axisLeft(yScale).tickFormat('').tickValues(ticks))
+    g.append('g')
+      .call(d3.axisRight(yScale).tickFormat('').tickValues(ticks))
+
+    g.append('text')
+      .text(dimension)
+      .attr('text-anchor', 'middle')
+      .attr('transform', `translate(0, -${r + 10})`)
+  })
+  
+
+  svg.append('g')
+    .selectAll('path')
+    .data([data])
+    .enter()
+    .append('path')
+      .attr('d', d =>
+        radialLine([
+          d.Hospitals,
+          d.Schools,
+          d.Trains,
+          d.Buses
+        ].map((v, i) => [Math.PI * 2 * i / 4, yScale(v)])) 
+      )
+      .attr('transform', `translate(${r}, ${r})`)
+      .attr('stroke', 'SteelBlue')
+      .attr('stroke-width', 5)
+      .attr('fill', 'rgba(70, 130, 180, 0.3)')
+  
+  svg.append('g')
+    .selectAll('path')
+    .data(ticks)
+    .enter()
+    .append('path')
+      .attr('d', d => radialLine(_.range(7).map((v, i) => [Math.PI * 2 * i / 4, yScale(d)])))
+      .attr('transform', `translate(${r}, ${r})`)
+      .attr('stroke', 'grey')
+      .attr('opacity', 0.5)
+      .attr('fill', 'none')
+
+
+    };
