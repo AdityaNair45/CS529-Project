@@ -381,6 +381,8 @@ const rad2deg = (angle) => {
 };
 
 const renderResourceDistribution = (selectedCommunityId) => {
+  
+  svg.selectAll("g").remove();
     let selectedCommunity = chicagoRaceData.filter(
       (d) => d.COMMAREA == selectedCommunityId
     );
