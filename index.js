@@ -395,7 +395,7 @@ const renderResourceDistribution = (selectedCommunityId) => {
     var temp = Object.values(data).slice(11,15)
     var min = Math.min.apply(Math, temp)   
     var max = Math.max.apply(Math, temp)
-    keys = ['Hospital','School','Train','Bus']
+    keys = ['Hospital','School','Bus','Train']
 
    const r = 200
   const margin = { left: 30, top: 30, right: 30, bottom: 30 }
@@ -447,8 +447,9 @@ const renderResourceDistribution = (selectedCommunityId) => {
         radialLine([
           d.Hospitals,
           d.Schools,
-          d.Trains,
-          d.Buses
+          d.Buses,
+          d.Trains
+          
         ].map((v, i) => [Math.PI * 2 * i / 4, yScale(v)])) 
       )
       .attr('transform', `translate(${r}, ${r})`)
