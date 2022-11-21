@@ -37,3 +37,13 @@ path.arc:hover {
 .r.axis text {
   text-anchor: end;
 }
+
+
+select {
+  padding: 5px;
+  font-weight: bold;
+}
+
+option {
+  padding: 5px
+}

@@ -20,6 +20,7 @@ let projection = d3
 let path = d3.geoPath(projection);
 let chicagoMap;
 let g;
+let selectedCommunityAreas = [];
 
 let selectedRace = "White";
 
@@ -29,6 +30,45 @@ let busStopsData;
 let hospitalsData;
 let schoolsData;
 let trainsData;
+const allCategories = [
+  {
+    value: "White",
+    text: "White",
+  },
+
+  {
+    value: "Asian",
+    text: "Asian",
+  },
+
+  {
+    value: "Black",
+    text: "Black",
+  },
+
+  {
+    value: "Hispanic",
+    text: "Hispanic",
+  },
+
+  {
+    value: "Pacific Islander",
+    text: "Pacific Islander",
+  },
+
+  {
+    value: "Native",
+    text: "Native American",
+  },
+  {
+    value: "Other",
+    text: "Other",
+  },
+  {
+    value: "Population",
+    text: "Total Population",
+  },
+];
 
 const PI = Math.PI,
   arcMinRadius = 10,
@@ -55,14 +95,44 @@ const loadAllFiles = async () => {
 const loadMap = async () => {
   let mapColorScale = d3
     .scaleLinear()
-    .interpolate(() => d3.interpolateBlues)
+    .interpolate(() => d3.interpolatePurples)
     .domain([
       chicagoRaceData[78][selectedRace],
       chicagoRaceData[77][selectedRace],
     ]);
-
+  let labels = d3.range(chicagoRaceData[78][selectedRace], chicagoRaceData[77][selectedRace], (chicagoRaceData[77][selectedRace] - chicagoRaceData[78][selectedRace])/5)
+  console.log(labels);
   svg = d3.select("#chicagoMap");
   svg.selectAll("*").remove();
+  svg.style("background", 'url("Images/chicago.png") no-repeat');
+  svg.style("background-size", `${mapWidth}px ${mapHeight}px`);
+
+  const foreign = svg
+    .append("foreignObject")
+    .attr("width", 150)
+    .attr("height", 100)
+    .append("xhtml:body");
+
+  
+  const dropdown = foreign
+    // .append("label")
+    // .text("Categories")
+    .append("select")
+    .attr("id", "categoriesDropDown")
+    .attr("class", "form-control")
+    .selectAll("option")
+    .data(allCategories)
+    .enter()
+    .append("option")
+    .text((d) => d.text)
+    .attr("value", (d) => d.value)
+    .on("change",(d) => {
+      console.log(d);
+    });
+  
+  const dropdownElement = document.getElementById("categoriesDropDown");
+  dropdownElement.value = selectedRace;
+  dropdownElement.addEventListener("change", (e) => {selectedRace = dropdownElement.value; loadMap() });
   chicagoMap = svg.append("g");
   chicagoMap
     .selectAll("path")
@@ -77,6 +147,33 @@ const loadMap = async () => {
       const community_area = d.properties.area_numbe;
       return mapColorScale(chicagoRaceData[community_area - 1][selectedRace]);
     });
+
+  let legendGroup = svg
+    .append("g")
+    .attr("class", "legendThreshold")
+    .attr("transform", "translate(600,600)");
+  legendGroup
+    .append("text")
+    .attr("class", "caption")
+    .attr("x", 0)
+    .attr("y", -6)
+    .style("font-weight", "bold")
+    .text("Population")
+    .style("font-size", "20px");
+
+
+  
+  var legend = d3
+    .legendColor()
+    .labels(function (d) {
+      return labels[d.i];
+    })
+    .shapePadding(0)
+    .orient("vertical")
+    .shapeWidth(40)
+    .scale(mapColorScale)
+  svg.select(".legendThreshold").call(legend);
+ 
 };
 
 const zoomOnClick = (d) => {
@@ -118,6 +215,16 @@ const zoomOnClick = (d) => {
   const selectedCommunityId = d.properties.area_numbe;
 
   if (addResources) {
+    if (selectedCommunityAreas.length == 3) {
+      selectedCommunityAreas.shift();
+    }
+    const index = selectedCommunityAreas.findIndex(
+      (a) => a.area_numbe == selectedCommunityId
+    );
+    if (index == -1) {
+      selectedCommunityAreas.push(d.properties);
+    }
+    console.log(selectedCommunityAreas);
     addResourcesToMap(selectedCommunityId, x, y, k);
     renderRaceDistribution(selectedCommunityId);
     renderResourceDistribution(selectedCommunityId);
@@ -382,92 +489,84 @@ const rad2deg = (angle) => {
 };
 
 const renderResourceDistribution = (selectedCommunityId) => {
-  
-   if (resourceSvg) {
+  if (resourceSvg) {
     resourceSvg.selectAll("*").remove();
   }
-    let selectedCommunity = chicagoRaceData.filter(
-      (d) => d.COMMAREA == selectedCommunityId
-    );
+  let selectedCommunity = chicagoRaceData.filter(
+    (d) => d.COMMAREA == selectedCommunityId
+  );
 
-    data = selectedCommunity[0];
+  data = selectedCommunity[0];
 
-    var temp = Object.values(data).slice(11,15)
-    var min = Math.min.apply(Math, temp)   
-    var max = Math.max.apply(Math, temp)
-    keys = ['Hospital','School','Bus','Train']
+  var temp = Object.values(data).slice(11, 15);
+  var min = Math.min.apply(Math, temp);
+  var max = Math.max.apply(Math, temp);
+  keys = ["Hospital", "School", "Bus", "Train"];
 
-   const r = 200
-  const margin = { left: 30, top: 30, right: 30, bottom: 30 }
+  const r = 200;
+  const margin = { left: 30, top: 30, right: 30, bottom: 30 };
 
-  resourceSvg = d3.select('#resourceVisualization');
-    resourceSvg.attr('viewBox',
-      `-${margin.left},
+  resourceSvg = d3.select("#resourceVisualization");
+  resourceSvg.attr(
+    "viewBox",
+    `-${margin.left},
       -${margin.top},
       ${r * 2 + margin.left + margin.right},
-      ${r * 2 + margin.bottom + margin.top}`)
-  
-  const dimensions = keys
-  
+      ${r * 2 + margin.bottom + margin.top}`
+  );
 
-  const radialLine = d3.lineRadial()
-  
+  const dimensions = keys;
 
-  const yScale = d3.scaleLinear()
-    .range([0, r])
-    .domain([min, max])
-  
+  const radialLine = d3.lineRadial();
 
-  const ticks = [2.5, 5, 7.5, 10]
+  const yScale = d3.scaleLinear().range([0, r]).domain([min, max]);
+
+  const ticks = [2.5, 5, 7.5, 10];
 
   dimensions.forEach((dimension, i) => {
+    const g = resourceSvg
+      .append("g")
+      .attr("transform", `translate(${r}, ${r}) rotate(${i * 90})`);
 
-    const g = resourceSvg.append('g')
-      .attr('transform', `translate(${r}, ${r}) rotate(${i * 90})`)
+    g.append("g").call(d3.axisLeft(yScale).tickFormat("").tickValues(ticks));
+    g.append("g").call(d3.axisRight(yScale).tickFormat("").tickValues(ticks));
 
-
-    g.append('g')
-      .call(d3.axisLeft(yScale).tickFormat('').tickValues(ticks))
-    g.append('g')
-      .call(d3.axisRight(yScale).tickFormat('').tickValues(ticks))
-
-    g.append('text')
+    g.append("text")
       .text(dimension)
-      .attr('text-anchor', 'middle')
-      .attr('transform', `translate(0, -${r + 10})`)
-  })
-  
+      .attr("text-anchor", "middle")
+      .attr("transform", `translate(0, -${r + 10})`);
+  });
 
-  resourceSvg.append('g')
-    .selectAll('path')
+  resourceSvg
+    .append("g")
+    .selectAll("path")
     .data([data])
     .enter()
-    .append('path')
-      .attr('d', d =>
-        radialLine([
-          d.Hospitals,
-          d.Schools,
-          d.Buses,
-          d.Trains
-          
-        ].map((v, i) => [Math.PI * 2 * i / 4, yScale(v)])) 
+    .append("path")
+    .attr("d", (d) =>
+      radialLine(
+        [d.Hospitals, d.Schools, d.Buses, d.Trains].map((v, i) => [
+          (Math.PI * 2 * i) / 4,
+          yScale(v),
+        ])
       )
-      .attr('transform', `translate(${r}, ${r})`)
-      .attr('stroke', 'SteelBlue')
-      .attr('stroke-width', 5)
-      .attr('fill', 'rgba(70, 130, 180, 0.3)')
-  
-  resourceSvg.append('g')
-    .selectAll('path')
+    )
+    .attr("transform", `translate(${r}, ${r})`)
+    .attr("stroke", "SteelBlue")
+    .attr("stroke-width", 5)
+    .attr("fill", "rgba(70, 130, 180, 0.3)");
+
+  resourceSvg
+    .append("g")
+    .selectAll("path")
     .data(ticks)
     .enter()
-    .append('path')
-      .attr('d', d => radialLine(_.range(7).map((v, i) => [Math.PI * 2 * i / 4, yScale(d)])))
-      .attr('transform', `translate(${r}, ${r})`)
-      .attr('stroke', 'grey')
-      .attr('opacity', 0.5)
-      .attr('fill', 'none')
-
-
-    };
- 
+    .append("path")
+    .attr("d", (d) =>
+      radialLine(_.range(7).map((v, i) => [(Math.PI * 2 * i) / 4, yScale(d)]))
+    )
+    .attr("transform", `translate(${r}, ${r})`)
+    .attr("stroke", "grey")
+    .attr("opacity", 0.5)
+    .attr("fill", "none");
+};
