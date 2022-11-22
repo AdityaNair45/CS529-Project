@@ -104,8 +104,8 @@ const loadMap = async () => {
   console.log(labels);
   svg = d3.select("#chicagoMap");
   svg.selectAll("*").remove();
-  svg.style("background", 'url("Images/chicago.png") no-repeat');
-  svg.style("background-size", `${mapWidth}px ${mapHeight}px`);
+  // svg.style("background", 'url("Images/chicago.png") no-repeat');
+  // svg.style("background-size", `${mapWidth}px ${mapHeight}px`);
 
   const foreign = svg
     .append("foreignObject")
@@ -226,7 +226,7 @@ const zoomOnClick = (d) => {
     }
     console.log(selectedCommunityAreas);
     addResourcesToMap(selectedCommunityId, x, y, k);
-    renderRaceDistribution(selectedCommunityId);
+    renderRaceDistribution(selectedCommunityAreas);
     renderResourceDistribution(selectedCommunityId);
   }
 };
@@ -354,127 +354,169 @@ const onCategoryChange = () => {
   loadMap();
 };
 
-const renderRaceDistribution = (selectedCommunityId) => {
-  let selectedCommunity = chicagoRaceData.filter(
-    (d) => d.COMMAREA == selectedCommunityId
-  );
-  selectedCommunity = selectedCommunity[0];
-  const max = Math.max(
-    selectedCommunity["White"],
-    selectedCommunity["Asian"],
-    selectedCommunity["Black"],
-    selectedCommunity["Hispanic"],
-    selectedCommunity["Pacific Islander"],
-    selectedCommunity["Native"],
-    selectedCommunity["Other"]
-  );
 
-  const keys = [
-    "White",
-    "Asian",
-    "Black",
-    "Hispanic",
-    "Pacific Islander",
-    "Native",
-    "Other",
-  ];
-
-  let scale = d3
-    .scaleLinear()
-    .domain([0, max * 1.1])
-    .range([0, 2 * PI]);
-
-  let ticks = scale.ticks(numTicks).slice(0, -1);
-
-  numArcs = keys.length;
-  arcWidth = (chartRadius - arcMinRadius - numArcs * arcPadding) / numArcs;
-
-  let arc = d3
-    .arc()
-    .innerRadius((d, i) => getInnerRadius(i))
-    .outerRadius((d, i) => getOuterRadius(i))
-    .startAngle(0)
-    .endAngle((d, i) => scale(d));
+function renderRaceDistribution(array){
 
   if (raceSvg) {
     raceSvg.selectAll("*").remove();
   }
-  raceSvg = d3
-    .select("#raceVisualization")
-    .attr("width", raceVizWidth)
-    .attr("height", raceVizHeight)
-    .append("g")
-    .attr(
-      "transform",
-      "translate(" + raceVizWidth / 2 + "," + raceVizHeight / 2 + ")"
-    );
 
-  let radialAxis = raceSvg
-    .append("g")
-    .attr("class", "r axis")
-    .selectAll("g")
-    .data(keys)
-    .enter()
-    .append("g");
+  raceSvg = d3.select('#raceVisualization')
 
-  radialAxis
-    .append("circle")
-    .attr("r", (d, i) => getOuterRadius(i) + arcPadding)
-    .attr("fill-opacity", 0.2);
+  const height = 600
+  const width = 650
+  var data1, data2, data3
+  const margin = { left: 65, top: 10, right: 10, bottom: 50 }
+  var race = ['White','Asian','Black','Hispanic','Pacific Islander','Native','Other']
+  var max, min=0;
+  var maxes = [];
+  var xScale = d3.scaleBand()
+      	.domain(race)
+      	.range([margin.left, width - margin.right]);
 
-  radialAxis
-    .append("text")
-    .attr("x", labelPadding)
-    .attr("y", (d, i) => -getOuterRadius(i) + arcPadding)
-    .text((d) => d);
+  console.log(array)
 
-  let axialAxis = raceSvg
-    .append("g")
-    .attr("class", "a axis")
-    .selectAll("g")
-    .data(ticks)
-    .enter()
-    .append("g")
-    .attr("transform", (d) => "rotate(" + (rad2deg(scale(d)) - 90) + ")");
+  if(array.length > 0){
+    var area1 = parseInt(array[0]['area_num_1'])
+    data1 =  Object.values(chicagoRaceData[area1-1]).slice(3,10)
+    maxes.push(Math.max(...data1))
+  }
 
-  axialAxis
-    .append("line")
-    .attr("x2", chartRadius)
-    .attr("stroke-width", 2)
-    .attr("stroke", "black");
+  if(array.length > 1){
+    var area2 = parseInt(array[1]['area_num_1'])
+    data2 =  Object.values(chicagoRaceData[area2-1]).slice(3,10)
+    maxes.push(Math.max(...data2))
+  }
 
-  axialAxis
-    .append("text")
-    .attr("x", chartRadius + 10)
-    .style("text-anchor", (d) =>
-      scale(d) >= PI && scale(d) < 2 * PI ? "end" : null
-    )
-    .attr(
-      "transform",
-      (d) =>
-        "rotate(" + (90 - rad2deg(scale(d))) + "," + (chartRadius + 10) + ",0)"
-    )
-    .text((d) => d);
+  if(array.length == 3){
+    var area3 = parseInt(array[2]['area_num_1'])
+    data3 =  Object.values(chicagoRaceData[area3-1]).slice(3,10)
+    maxes.push(Math.max(...data3))
+  }
 
-  let arcs = raceSvg
-    .append("g")
-    .attr("class", "data")
-    .selectAll("path")
-    .data(keys)
-    .enter()
-    .append("path")
-    .attr("class", "arc")
-    .style("fill", (d, i) => raceVizColor(i));
+  max = Math.max(...maxes)
 
-  arcs
-    .transition()
-    .delay((d, i) => i * 200)
-    .duration(1000)
-    .attrTween("d", (d, i) => {
-      let interpolate = d3.interpolate(0, selectedCommunity[d]);
-      return (t) => arc(interpolate(t), i);
-    });
-};
+  var yScale = d3.scaleLinear()
+    .domain([min,max])
+    .range([height - margin.bottom, margin.top])
+
+    let tooltip = d3
+        .tip()
+        .html(function (d) {
+            return `
+            <div class = 'd3-tip' style='background:#E5E8E8;font-size: small; border-width: 2px; border-style: solid; border-color: black;'><span style='color:black; margin-top: 10px; margin-left: 10px; margin-right: 5px;'><strong>Community Area:</strong> 
+            ${d.z}</span><br/>
+            <span style='color:black; margin-top: 5px; margin-left: 10px; margin-right: 10px'><strong>Population:</strong> 
+            ${d.y}</span><br/>
+                </div>
+                `
+        })
+
+  svg.call(tooltip)
+
+  if(array.length > 0){
+
+    var race1_xy = []; 
+for(var i = 0; i < data1.length; i++ ) {
+   race1_xy.push({x: race[i], y: data1[i], z: array[0]['community']});
+}
+    
+
+    raceSvg.append('g')
+    .call(d3.axisBottom(xScale).ticks(8))
+    .attr('transform', `translate(0,${height - margin.bottom})`)
+
+     var g1 = raceSvg.append('g').selectAll('rect')
+     .data(race1_xy)
+     .join(enter => enter.append("rect")
+          .attr("x", (d,i) => (margin.left + i * ((width - margin.right - margin.left ) / data1.length)) + 15)
+           .attr("y", d => yScale(d.y))
+           .attr("width", 15)
+           .attr("height", d => yScale(0) - yScale(d.y))
+           .attr("fill", (d, i) => '#1F77B4FF') .on('mouseover', function (d,i) {
+            tooltip.show(d,this);
+                 d3.select(this)
+              .attr('opacity', 0.5)    
+          })
+          .on('mouseout',function (d,i) {
+            tooltip.hide(d,this);
+            d3.select(this)
+              .attr('opacity', 1)    
+          }));    
+  }
+
+  if(array.length > 1){
+    
+    var race2_xy = []; 
+for(var i = 0; i < data2.length; i++ ) {
+   race2_xy.push({x: race[i], y: data2[i], z:array[1]['community']});
+}
+    
+    var g2 = raceSvg.append('g').selectAll('rect')
+     .data(race2_xy)
+     .join(enter => enter.append("rect")
+          .attr("x", (d,i) => (margin.left + i * ((width - margin.right - margin.left ) / data2.length)) + 30)
+           .attr("y", d => yScale(d.y))
+           .attr("width", 15)
+           .attr("height", d => yScale(0) - yScale(d.y))
+           .attr("fill", (d, i) => '#F77F0EFF') .on('mouseover', function (d,i) {
+            tooltip.show(d,this);
+                 d3.select(this)
+              .attr('opacity', 0.5)    
+          })
+          .on('mouseout',function (d,i) {
+            tooltip.hide(d,this);
+            d3.select(this)
+              .attr('opacity', 1)    
+          }));    
+  }
+
+  if(array.length == 3){   
+    var race3_xy = []; 
+for(var i = 0; i < data3.length; i++ ) {
+   race3_xy.push({x: race[i], y: data3[i], z:array[2]['community']});
+}
+   
+    var g3 = raceSvg.append('g').selectAll('rect')
+     .data(race3_xy)
+     .join(enter => enter.append("rect")
+          .attr("x", (d,i) => (margin.left + i * ((width - margin.right - margin.left ) / data3.length)) + 45)
+           .attr("y", d => yScale(d.y))
+           .attr("width", 15)
+           .attr("height", d => yScale(0) - yScale(d.y))
+           .attr("fill", (d, i) => '#2CA02CFF') .on('mouseover', function (d,i) {
+            tooltip.show(d,this);
+                 d3.select(this)
+              .attr('opacity', 0.5)    
+          })
+          .on('mouseout',function (d,i) {
+            tooltip.hide(d,this);
+            d3.select(this)
+              .attr('opacity', 1)    
+          }));    
+  }
+
+    raceSvg.append('g')
+    .call(d3.axisLeft(yScale))
+    .attr('transform', `translate(${margin.left},0)`)
+
+    raceSvg.append("text")
+    .attr("class", "x label")
+    .attr("text-anchor", "end")
+    .attr("x", width-300)
+    .attr("y", height - 10)
+    .text("Race");
+
+    raceSvg.append("text")
+    .attr("class", "y label")
+    .attr("text-anchor", "end")
+    .attr("x", 0-250)
+    .attr("y", 5)
+    .attr("dy", ".75em")
+    .attr("transform", "rotate(-90)")
+    .text("Population of Race");
+  
+}
 
 const getInnerRadius = (index) => {
   return arcMinRadius + (numArcs - (index + 1)) * (arcWidth + arcPadding);
