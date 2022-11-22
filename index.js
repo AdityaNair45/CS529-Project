@@ -1,5 +1,5 @@
 let mapWidth = 800;
-let mapHeight = 750;
+let mapHeight = 600;
 let raceVizWidth = 650;
 let raceVizHeight = 600;
 let chartRadius = raceVizHeight / 2 - 40;
@@ -69,6 +69,8 @@ const allCategories = [
     text: "Total Population",
   },
 ];
+let x, y, k;
+let selectedCommunityId;
 
 const PI = Math.PI,
   arcMinRadius = 10,
@@ -90,6 +92,16 @@ const loadAllFiles = async () => {
   trainsData = await d3.csv("Datasets/Train_Preprocessed.csv");
 
   loadMap();
+
+  $(document).ready(function () {
+    $(".resourceDropdown").select2({ width: '40%' });
+  });
+
+  $(".resourceDropdown").on("change", function (event) {
+    addResourcesToMap();
+  });
+
+  $(".resourceDropdown").val(["Bus", "Train", "School", "Hospital"]);
 };
 
 const loadMap = async () => {
@@ -100,8 +112,12 @@ const loadMap = async () => {
       chicagoRaceData[78][selectedRace],
       chicagoRaceData[77][selectedRace],
     ]);
-  let labels = d3.range(chicagoRaceData[78][selectedRace], chicagoRaceData[77][selectedRace], (chicagoRaceData[77][selectedRace] - chicagoRaceData[78][selectedRace])/5)
-  console.log(labels);
+  let labels = d3.range(
+    chicagoRaceData[78][selectedRace],
+    chicagoRaceData[77][selectedRace],
+    (chicagoRaceData[77][selectedRace] - chicagoRaceData[78][selectedRace]) / 5
+  );
+  labels = labels.map((l) => Math.round(l));
   svg = d3.select("#chicagoMap");
   svg.selectAll("*").remove();
   // svg.style("background", 'url("Images/chicago.png") no-repeat');
@@ -113,26 +129,39 @@ const loadMap = async () => {
     .attr("height", 100)
     .append("xhtml:body");
 
-  
-  const dropdown = foreign
-    // .append("label")
-    // .text("Categories")
-    .append("select")
-    .attr("id", "categoriesDropDown")
-    .attr("class", "form-control")
-    .selectAll("option")
-    .data(allCategories)
-    .enter()
-    .append("option")
-    .text((d) => d.text)
-    .attr("value", (d) => d.value)
-    .on("change",(d) => {
-      console.log(d);
+  // const dropdown = foreign
+  //   // .append("label")
+  //   // .text("Categories")
+  //   .append("select")
+  //   .attr("id", "categoriesDropDown")
+  //   .attr("class", "form-control")
+  //   .selectAll("option")
+  //   .data(allCategories)
+  //   .enter()
+  //   .append("option")
+  //   .text((d) => d.text)
+  //   .attr("value", (d) => d.value)
+  //   .on("change",(d) => {
+  //     console.log(d);
+  //   });
+
+  // const dropdownElement = document.getElementById("categoriesDropDown");
+  // dropdownElement.value = selectedRace;
+  // dropdownElement.addEventListener("change", (e) => {selectedRace = dropdownElement.value; loadMap() });
+
+  const mapToolTip = d3
+    .tip()
+    .attr("class", "d3-tip")
+    // .html("<p>This is a SVG inside a tooltip:</p><div id='tipDiv'></div>");
+    .html(function (d) {
+      return `<div class = 'd3-tip' style='background:#E5E8E8;font-size: small; border-width: 2px; border-style: solid; border-color: black;'><span style='color:black; margin-top: 10px; margin-left: 10px; margin-right: 5px;'><strong>Community Area:</strong> 
+  ${d.communityArea}</span><br/>
+  <span style='color:black; margin-top: 5px; margin-left: 10px; margin-right: 10px'><strong>Population:</strong> 
+  ${d.population}</span><br/>
+      </div>
+          `;
     });
-  
-  const dropdownElement = document.getElementById("categoriesDropDown");
-  dropdownElement.value = selectedRace;
-  dropdownElement.addEventListener("change", (e) => {selectedRace = dropdownElement.value; loadMap() });
+  svg.call(mapToolTip);
   chicagoMap = svg.append("g");
   chicagoMap
     .selectAll("path")
@@ -146,12 +175,20 @@ const loadMap = async () => {
     .attr("fill", (d) => {
       const community_area = d.properties.area_numbe;
       return mapColorScale(chicagoRaceData[community_area - 1][selectedRace]);
-    });
+    })
+    .on("mouseover", (d) => {
+      const toolTipObj = {
+        communityArea: d.properties.community,
+        population: chicagoRaceData[d.properties.area_numbe - 1][selectedRace],
+      };
+      mapToolTip.show(toolTipObj);
+    })
+    .on("mouseout", () => mapToolTip.hide());
 
   let legendGroup = svg
     .append("g")
     .attr("class", "legendThreshold")
-    .attr("transform", "translate(600,600)");
+    .attr("transform", "translate(650,450)");
   legendGroup
     .append("text")
     .attr("class", "caption")
@@ -161,8 +198,6 @@ const loadMap = async () => {
     .text("Population")
     .style("font-size", "20px");
 
-
-  
   var legend = d3
     .legendColor()
     .labels(function (d) {
@@ -171,13 +206,12 @@ const loadMap = async () => {
     .shapePadding(0)
     .orient("vertical")
     .shapeWidth(40)
-    .scale(mapColorScale)
+    .scale(mapColorScale);
   svg.select(".legendThreshold").call(legend);
- 
 };
 
 const zoomOnClick = (d) => {
-  let x, y, k;
+  // let x, y, k;
   let addResources = true;
   if (d && centered !== d) {
     let centroid = path.centroid(d);
@@ -212,7 +246,7 @@ const zoomOnClick = (d) => {
       })scale(${k})translate(${-x},${-y})`
     );
 
-  const selectedCommunityId = d.properties.area_numbe;
+  selectedCommunityId = d.properties.area_numbe;
 
   if (addResources) {
     if (selectedCommunityAreas.length == 3) {
@@ -225,13 +259,15 @@ const zoomOnClick = (d) => {
       selectedCommunityAreas.push(d.properties);
     }
     console.log(selectedCommunityAreas);
-    addResourcesToMap(selectedCommunityId, x, y, k);
+    addResourcesToMap();
     renderRaceDistribution(selectedCommunityAreas);
     renderResourceDistribution(selectedCommunityId);
   }
 };
 
-const addResourcesToMap = (selectedCommunityId, x, y, k) => {
+const addResourcesToMap = () => {
+  console.log($(".resourceDropdown").val());
+  const selectedResources = $(".resourceDropdown").val();
   svg.selectAll("image").remove();
 
   // Get all resources of selected community
@@ -252,101 +288,106 @@ const addResourcesToMap = (selectedCommunityId, x, y, k) => {
   );
 
   // Adding Bus Stops
-  busStopsLocations = svg.append("g");
+  if (selectedResources.indexOf("Bus") != -1) {
+    busStopsLocations = svg.append("g");
 
-  busStopsLocations
-    .selectAll("images")
-    .data(busStopsOfSelectedCommunity)
-    .enter()
-    .append("svg:image")
-    .attr("width", 5)
-    .attr("height", 5)
-    .attr("xlink:href", "Images/busIcon.JPG")
-    .attr("x", (d) => projection([d.LONGITUDE, d.LATITUDE])[0])
-    .attr("y", (d) => projection([d.LONGITUDE, d.LATITUDE])[1]);
+    busStopsLocations
+      .selectAll("images")
+      .data(busStopsOfSelectedCommunity)
+      .enter()
+      .append("svg:image")
+      .attr("width", 5)
+      .attr("height", 5)
+      .attr("xlink:href", "Images/busIcon.JPG")
+      .attr("x", (d) => projection([d.LONGITUDE, d.LATITUDE])[0])
+      .attr("y", (d) => projection([d.LONGITUDE, d.LATITUDE])[1]);
 
-  busStopsLocations
-    .transition()
-    .duration(750)
-    .attr(
-      "transform",
-      `translate(${mapWidth / 2},${mapHeight / 2})scale(${
-        k - 2
-      })translate(${-x},${-y})`
-    );
-
+    busStopsLocations
+      .transition()
+      .duration(750)
+      .attr(
+        "transform",
+        `translate(${mapWidth / 2},${mapHeight / 2})scale(${
+          k - 2
+        })translate(${-x},${-y})`
+      );
+  }
   // Adding Train Stations
-  trainStationLocations = svg.append("g");
+  if (selectedResources.indexOf("Train") != -1) {
+    trainStationLocations = svg.append("g");
 
-  trainStationLocations
-    .selectAll("images")
-    .data(trainStationsOfSelectedCommunity)
-    .enter()
-    .append("svg:image")
-    .attr("width", 5)
-    .attr("height", 5)
-    .attr("xlink:href", "Images/trainIcon.JPG")
-    .attr("x", (d) => projection([d.Long, d.Lat])[0])
-    .attr("y", (d) => projection([d.Long, d.Lat])[1]);
+    trainStationLocations
+      .selectAll("images")
+      .data(trainStationsOfSelectedCommunity)
+      .enter()
+      .append("svg:image")
+      .attr("width", 5)
+      .attr("height", 5)
+      .attr("xlink:href", "Images/trainIcon.JPG")
+      .attr("x", (d) => projection([d.Long, d.Lat])[0])
+      .attr("y", (d) => projection([d.Long, d.Lat])[1]);
 
-  trainStationLocations
-    .transition()
-    .duration(750)
-    .attr(
-      "transform",
-      `translate(${mapWidth / 2},${mapHeight / 2})scale(${
-        k - 2
-      })translate(${-x},${-y})`
-    );
-
+    trainStationLocations
+      .transition()
+      .duration(750)
+      .attr(
+        "transform",
+        `translate(${mapWidth / 2},${mapHeight / 2})scale(${
+          k - 2
+        })translate(${-x},${-y})`
+      );
+  }
   // Adding Schools
-  schoolLocations = svg.append("g");
+  if (selectedResources.indexOf("School") != -1) {
+    schoolLocations = svg.append("g");
 
-  schoolLocations
-    .selectAll("images")
-    .data(schoolsOfSelectedCommunity)
-    .enter()
-    .append("svg:image")
-    .attr("width", 5)
-    .attr("height", 5)
-    .attr("xlink:href", "Images/schoolIcon.JPG")
-    .attr("x", (d) => projection([d.Long, d.Lat])[0])
-    .attr("y", (d) => projection([d.Long, d.Lat])[1]);
+    schoolLocations
+      .selectAll("images")
+      .data(schoolsOfSelectedCommunity)
+      .enter()
+      .append("svg:image")
+      .attr("width", 5)
+      .attr("height", 5)
+      .attr("xlink:href", "Images/schoolIcon.JPG")
+      .attr("x", (d) => projection([d.Long, d.Lat])[0])
+      .attr("y", (d) => projection([d.Long, d.Lat])[1]);
 
-  schoolLocations
-    .transition()
-    .duration(750)
-    .attr(
-      "transform",
-      `translate(${mapWidth / 2},${mapHeight / 2})scale(${
-        k - 2
-      })translate(${-x},${-y})`
-    );
-
+    schoolLocations
+      .transition()
+      .duration(750)
+      .attr(
+        "transform",
+        `translate(${mapWidth / 2},${mapHeight / 2})scale(${
+          k - 2
+        })translate(${-x},${-y})`
+      );
+  }
   // Adding Hospitals
-  hospitalLocations = svg.append("g");
+  if (selectedResources.indexOf("Hospital") != -1) {
+    hospitalLocations = svg.append("g");
 
-  hospitalLocations
-    .selectAll("images")
-    .data(hospitalsOfSelectedCommunity)
-    .enter()
-    .append("svg:image")
-    .attr("width", 5)
-    .attr("height", 5)
-    .attr("border-radius", 5)
-    .attr("xlink:href", "Images/hospitalIcon.JPG")
-    .attr("x", (d) => projection([d.Longitude, d.Latitude])[0])
-    .attr("y", (d) => projection([d.Longitude, d.Latitude])[1]);
+    hospitalLocations
+      .selectAll("images")
+      .data(hospitalsOfSelectedCommunity)
+      .enter()
+      .append("svg:image")
+      .attr("width", 5)
+      .attr("height", 5)
+      .attr("border-radius", 5)
+      .attr("xlink:href", "Images/hospitalIcon.JPG")
+      .attr("x", (d) => projection([d.Longitude, d.Latitude])[0])
+      .attr("y", (d) => projection([d.Longitude, d.Latitude])[1]);
 
-  hospitalLocations
-    .transition()
-    .duration(750)
-    .attr(
-      "transform",
-      `translate(${mapWidth / 2},${mapHeight / 2})scale(${
-        k - 2
-      })translate(${-x},${-y})`
-    );
+    hospitalLocations
+      .transition()
+      .duration(750)
+      .attr(
+        "transform",
+        `translate(${mapWidth / 2},${mapHeight / 2})scale(${
+          k - 2
+        })translate(${-x},${-y})`
+      );
+  }
 };
 
 const onCategoryChange = () => {
@@ -354,168 +395,205 @@ const onCategoryChange = () => {
   loadMap();
 };
 
-
-function renderRaceDistribution(array){
-
+function renderRaceDistribution(array) {
   if (raceSvg) {
     raceSvg.selectAll("*").remove();
   }
 
-  raceSvg = d3.select('#raceVisualization')
+  raceSvg = d3.select("#raceVisualization");
 
-  const height = 600
-  const width = 650
-  var data1, data2, data3
-  const margin = { left: 65, top: 10, right: 10, bottom: 50 }
-  var race = ['White','Asian','Black','Hispanic','Pacific Islander','Native','Other']
-  var max, min=0;
+  const height = 600;
+  const width = 650;
+  var data1, data2, data3;
+  const margin = { left: 65, top: 10, right: 10, bottom: 50 };
+  var race = [
+    "White",
+    "Asian",
+    "Black",
+    "Hispanic",
+    "Pacific Islander",
+    "Native",
+    "Other",
+  ];
+  var max,
+    min = 0;
   var maxes = [];
-  var xScale = d3.scaleBand()
-      	.domain(race)
-      	.range([margin.left, width - margin.right]);
+  var xScale = d3
+    .scaleBand()
+    .domain(race)
+    .range([margin.left, width - margin.right]);
 
-  console.log(array)
+  console.log(array);
 
-  if(array.length > 0){
-    var area1 = parseInt(array[0]['area_num_1'])
-    data1 =  Object.values(chicagoRaceData[area1-1]).slice(3,10)
-    maxes.push(Math.max(...data1))
+  if (array.length > 0) {
+    var area1 = parseInt(array[0]["area_num_1"]);
+    data1 = Object.values(chicagoRaceData[area1 - 1]).slice(3, 10);
+    maxes.push(Math.max(...data1));
   }
 
-  if(array.length > 1){
-    var area2 = parseInt(array[1]['area_num_1'])
-    data2 =  Object.values(chicagoRaceData[area2-1]).slice(3,10)
-    maxes.push(Math.max(...data2))
+  if (array.length > 1) {
+    var area2 = parseInt(array[1]["area_num_1"]);
+    data2 = Object.values(chicagoRaceData[area2 - 1]).slice(3, 10);
+    maxes.push(Math.max(...data2));
   }
 
-  if(array.length == 3){
-    var area3 = parseInt(array[2]['area_num_1'])
-    data3 =  Object.values(chicagoRaceData[area3-1]).slice(3,10)
-    maxes.push(Math.max(...data3))
+  if (array.length == 3) {
+    var area3 = parseInt(array[2]["area_num_1"]);
+    data3 = Object.values(chicagoRaceData[area3 - 1]).slice(3, 10);
+    maxes.push(Math.max(...data3));
   }
 
-  max = Math.max(...maxes)
+  max = Math.max(...maxes);
 
-  var yScale = d3.scaleLinear()
-    .domain([min,max])
-    .range([height - margin.bottom, margin.top])
+  var yScale = d3
+    .scaleLinear()
+    .domain([min, max])
+    .range([height - margin.bottom, margin.top]);
 
-    let tooltip = d3
-        .tip()
-        .html(function (d) {
-            return `
+  let tooltip = d3.tip().html(function (d) {
+    return `
             <div class = 'd3-tip' style='background:#E5E8E8;font-size: small; border-width: 2px; border-style: solid; border-color: black;'><span style='color:black; margin-top: 10px; margin-left: 10px; margin-right: 5px;'><strong>Community Area:</strong> 
             ${d.z}</span><br/>
             <span style='color:black; margin-top: 5px; margin-left: 10px; margin-right: 10px'><strong>Population:</strong> 
             ${d.y}</span><br/>
                 </div>
-                `
-        })
+                `;
+  });
 
-  svg.call(tooltip)
+  svg.call(tooltip);
 
-  if(array.length > 0){
+  if (array.length > 0) {
+    var race1_xy = [];
+    for (var i = 0; i < data1.length; i++) {
+      race1_xy.push({ x: race[i], y: data1[i], z: array[0]["community"] });
+    }
 
-    var race1_xy = []; 
-for(var i = 0; i < data1.length; i++ ) {
-   race1_xy.push({x: race[i], y: data1[i], z: array[0]['community']});
-}
-    
+    raceSvg
+      .append("g")
+      .call(d3.axisBottom(xScale).ticks(8))
+      .attr("transform", `translate(0,${height - margin.bottom})`);
 
-    raceSvg.append('g')
-    .call(d3.axisBottom(xScale).ticks(8))
-    .attr('transform', `translate(0,${height - margin.bottom})`)
-
-     var g1 = raceSvg.append('g').selectAll('rect')
-     .data(race1_xy)
-     .join(enter => enter.append("rect")
-          .attr("x", (d,i) => (margin.left + i * ((width - margin.right - margin.left ) / data1.length)) + 15)
-           .attr("y", d => yScale(d.y))
-           .attr("width", 15)
-           .attr("height", d => yScale(0) - yScale(d.y))
-           .attr("fill", (d, i) => '#1F77B4FF') .on('mouseover', function (d,i) {
-            tooltip.show(d,this);
-                 d3.select(this)
-              .attr('opacity', 0.5)    
+    var g1 = raceSvg
+      .append("g")
+      .selectAll("rect")
+      .data(race1_xy)
+      .join((enter) =>
+        enter
+          .append("rect")
+          .attr(
+            "x",
+            (d, i) =>
+              margin.left +
+              i * ((width - margin.right - margin.left) / data1.length) +
+              15
+          )
+          .attr("y", (d) => yScale(d.y))
+          .attr("width", 15)
+          .attr("height", (d) => yScale(0) - yScale(d.y))
+          .attr("fill", (d, i) => "#1F77B4FF")
+          .on("mouseover", function (d, i) {
+            tooltip.show(d, this);
+            d3.select(this).attr("opacity", 0.5);
           })
-          .on('mouseout',function (d,i) {
-            tooltip.hide(d,this);
-            d3.select(this)
-              .attr('opacity', 1)    
-          }));    
+          .on("mouseout", function (d, i) {
+            tooltip.hide(d, this);
+            d3.select(this).attr("opacity", 1);
+          })
+      );
   }
 
-  if(array.length > 1){
-    
-    var race2_xy = []; 
-for(var i = 0; i < data2.length; i++ ) {
-   race2_xy.push({x: race[i], y: data2[i], z:array[1]['community']});
-}
-    
-    var g2 = raceSvg.append('g').selectAll('rect')
-     .data(race2_xy)
-     .join(enter => enter.append("rect")
-          .attr("x", (d,i) => (margin.left + i * ((width - margin.right - margin.left ) / data2.length)) + 30)
-           .attr("y", d => yScale(d.y))
-           .attr("width", 15)
-           .attr("height", d => yScale(0) - yScale(d.y))
-           .attr("fill", (d, i) => '#F77F0EFF') .on('mouseover', function (d,i) {
-            tooltip.show(d,this);
-                 d3.select(this)
-              .attr('opacity', 0.5)    
+  if (array.length > 1) {
+    var race2_xy = [];
+    for (var i = 0; i < data2.length; i++) {
+      race2_xy.push({ x: race[i], y: data2[i], z: array[1]["community"] });
+    }
+
+    var g2 = raceSvg
+      .append("g")
+      .selectAll("rect")
+      .data(race2_xy)
+      .join((enter) =>
+        enter
+          .append("rect")
+          .attr(
+            "x",
+            (d, i) =>
+              margin.left +
+              i * ((width - margin.right - margin.left) / data2.length) +
+              30
+          )
+          .attr("y", (d) => yScale(d.y))
+          .attr("width", 15)
+          .attr("height", (d) => yScale(0) - yScale(d.y))
+          .attr("fill", (d, i) => "#F77F0EFF")
+          .on("mouseover", function (d, i) {
+            tooltip.show(d, this);
+            d3.select(this).attr("opacity", 0.5);
           })
-          .on('mouseout',function (d,i) {
-            tooltip.hide(d,this);
-            d3.select(this)
-              .attr('opacity', 1)    
-          }));    
+          .on("mouseout", function (d, i) {
+            tooltip.hide(d, this);
+            d3.select(this).attr("opacity", 1);
+          })
+      );
   }
 
-  if(array.length == 3){   
-    var race3_xy = []; 
-for(var i = 0; i < data3.length; i++ ) {
-   race3_xy.push({x: race[i], y: data3[i], z:array[2]['community']});
-}
-   
-    var g3 = raceSvg.append('g').selectAll('rect')
-     .data(race3_xy)
-     .join(enter => enter.append("rect")
-          .attr("x", (d,i) => (margin.left + i * ((width - margin.right - margin.left ) / data3.length)) + 45)
-           .attr("y", d => yScale(d.y))
-           .attr("width", 15)
-           .attr("height", d => yScale(0) - yScale(d.y))
-           .attr("fill", (d, i) => '#2CA02CFF') .on('mouseover', function (d,i) {
-            tooltip.show(d,this);
-                 d3.select(this)
-              .attr('opacity', 0.5)    
+  if (array.length == 3) {
+    var race3_xy = [];
+    for (var i = 0; i < data3.length; i++) {
+      race3_xy.push({ x: race[i], y: data3[i], z: array[2]["community"] });
+    }
+
+    var g3 = raceSvg
+      .append("g")
+      .selectAll("rect")
+      .data(race3_xy)
+      .join((enter) =>
+        enter
+          .append("rect")
+          .attr(
+            "x",
+            (d, i) =>
+              margin.left +
+              i * ((width - margin.right - margin.left) / data3.length) +
+              45
+          )
+          .attr("y", (d) => yScale(d.y))
+          .attr("width", 15)
+          .attr("height", (d) => yScale(0) - yScale(d.y))
+          .attr("fill", (d, i) => "#2CA02CFF")
+          .on("mouseover", function (d, i) {
+            tooltip.show(d, this);
+            d3.select(this).attr("opacity", 0.5);
           })
-          .on('mouseout',function (d,i) {
-            tooltip.hide(d,this);
-            d3.select(this)
-              .attr('opacity', 1)    
-          }));    
+          .on("mouseout", function (d, i) {
+            tooltip.hide(d, this);
+            d3.select(this).attr("opacity", 1);
+          })
+      );
   }
 
-    raceSvg.append('g')
+  raceSvg
+    .append("g")
     .call(d3.axisLeft(yScale))
-    .attr('transform', `translate(${margin.left},0)`)
+    .attr("transform", `translate(${margin.left},0)`);
 
-    raceSvg.append("text")
+  raceSvg
+    .append("text")
     .attr("class", "x label")
     .attr("text-anchor", "end")
-    .attr("x", width-300)
+    .attr("x", width - 300)
     .attr("y", height - 10)
     .text("Race");
 
-    raceSvg.append("text")
+  raceSvg
+    .append("text")
     .attr("class", "y label")
     .attr("text-anchor", "end")
-    .attr("x", 0-250)
+    .attr("x", 0 - 250)
     .attr("y", 5)
     .attr("dy", ".75em")
     .attr("transform", "rotate(-90)")
     .text("Population of Race");
-  
 }
 
 const getInnerRadius = (index) => {
