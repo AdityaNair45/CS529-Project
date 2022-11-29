@@ -71,6 +71,7 @@ const allCategories = [
 ];
 let x, y, k;
 let selectedCommunityId;
+let mapColorScale;
 
 const PI = Math.PI,
   arcMinRadius = 10,
@@ -94,7 +95,7 @@ const loadAllFiles = async () => {
   loadMap();
 
   $(document).ready(function () {
-    $(".resourceDropdown").select2({ width: '40%' });
+    $(".resourceDropdown").select2({ width: "40%" });
   });
 
   $(".resourceDropdown").on("change", function (event) {
@@ -105,7 +106,7 @@ const loadAllFiles = async () => {
 };
 
 const loadMap = async () => {
-  let mapColorScale = d3
+  mapColorScale = d3
     .scaleLinear()
     .interpolate(() => d3.interpolatePurples)
     .domain([
@@ -174,7 +175,7 @@ const loadMap = async () => {
     .on("click", zoomOnClick)
     .attr("fill", (d) => {
       const community_area = d.properties.area_numbe;
-      return mapColorScale(chicagoRaceData[community_area - 1][selectedRace]);
+      return communityAreaColor(community_area);
     })
     .on("mouseover", (d) => {
       const toolTipObj = {
@@ -226,6 +227,7 @@ const zoomOnClick = (d) => {
     centered = null;
     svg.selectAll("image").remove();
     addResources = false;
+    console.log(d);
   }
 
   svg.selectAll("path").classed(
@@ -262,6 +264,11 @@ const zoomOnClick = (d) => {
     addResourcesToMap();
     renderRaceDistribution(selectedCommunityAreas);
     renderResourceDistribution(selectedCommunityId);
+  } else {
+    svg.selectAll("path").attr("fill", (d) => {
+      const community_area = d.properties.area_numbe;
+      return communityAreaColor(community_area);
+    });
   }
 };
 
@@ -594,6 +601,26 @@ function renderRaceDistribution(array) {
     .attr("dy", ".75em")
     .attr("transform", "rotate(-90)")
     .text("Population of Race");
+
+  let legend_x = 400;
+  let legend_y = 70;
+  selectedCommunityAreas.forEach((community) => {
+    console.log(community);
+    raceSvg
+      .append("circle")
+      .attr("cx", legend_x)
+      .attr("cy", legend_y)
+      .attr("r", 6)
+      .style("fill", communityAreaColor(community.area_numbe));
+    raceSvg
+      .append("text")
+      .attr("x", legend_x + 20)
+      .attr("y", legend_y)
+      .text(community.community)
+      .style("font-size", "15px")
+      .attr("alignment-baseline", "middle");
+    legend_y += 30;
+  });
 }
 
 const getInnerRadius = (index) => {
@@ -622,7 +649,7 @@ const renderResourceDistribution = (selectedCommunityId) => {
   var min = Math.min.apply(Math, temp);
   var max = Math.max.apply(Math, temp);
   keys = ["Hospital", "School", "Bus", "Train"];
-
+  console.log(data);
   const r = 200;
   const margin = { left: 30, top: 30, right: 30, bottom: 30 };
 
@@ -689,4 +716,15 @@ const renderResourceDistribution = (selectedCommunityId) => {
     .attr("stroke", "grey")
     .attr("opacity", 0.5)
     .attr("fill", "none");
+};
+
+const communityAreaColor = (community_area) => {
+  const index = selectedCommunityAreas.findIndex(
+    (a) => a.area_numbe == community_area
+  );
+  if (index == -1) {
+    return mapColorScale(chicagoRaceData[community_area - 1][selectedRace]);
+  } else {
+    return index == 0 ? "red" : index == 1 ? "blue" : "cyan";
+  }
 };

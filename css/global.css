@@ -1,7 +1,11 @@
 body{
   background-color: #CAEBF2;
+  margin: 0px;
 }
 
+svg {
+  margin: 10px
+}
 .card {
   border: 1px solid black;
   border-radius: 5px;
@@ -46,4 +50,19 @@ select {
 
 option {
   padding: 5px
+}
+
+nav {
+  background: #F2F7EB;
+  height: 65px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+label.logo {
+  color: #001E62;
+  font-size: 38px;
+  line-height: 65px;
+  padding: 0 100px;
+  font-weight: bold;
 }
