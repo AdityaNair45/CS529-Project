@@ -851,7 +851,7 @@ const communityAreaColor = (community_area) => {
   if (index == -1) {
     return mapColorScale(chicagoRaceData[community_area - 1][selectedRace]);
   } else {
-    return index == 0 ? "#3182b2" : index == 1 ? "#dd1c77" : "tomato";
+    return index == 0 ? "#3182bd" : index == 1 ? "#dd1c77" : "tomato";
   }
 };
 
