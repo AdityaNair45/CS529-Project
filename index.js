@@ -643,7 +643,10 @@ const rad2deg = (angle) => {
   return (angle * 180) / PI;
 };
 
-const renderResourceDistribution = (selectedCommunityId, selectedCommunityArea) => {
+const renderResourceDistribution = (
+  selectedCommunityId,
+  selectedCommunityArea
+) => {
   if (resourceSvg) {
     resourceSvg.selectAll("*").remove();
   }
@@ -740,6 +743,7 @@ ${d.Schools.toFixed(2)}</span><br/>
     .data([resourceObj])
     .enter()
     .append("path")
+    .attr("id", "communityRadar")
     .attr("d", (d) =>
       radialLine(
         [d.Hospitals, d.Schools, d.Buses, d.Trains].map((v, i) => [
@@ -752,8 +756,14 @@ ${d.Schools.toFixed(2)}</span><br/>
     .attr("stroke", "SteelBlue")
     .attr("stroke-width", 5)
     .attr("fill", "rgba(70, 130, 180, 0.3)")
-    .on("mouseover", (d) => resourceTooltip.show(d))
-    .on("mouseout", (d) => resourceTooltip.hide());
+    .on("mouseover", (d) => {
+      d3.select("#cityRadar").style("opacity", 0.2);
+      resourceTooltip.show(d);
+    })
+    .on("mouseout", (d) => {
+      d3.select("#cityRadar").style("opacity", 0.8);
+      resourceTooltip.hide();
+    });
 
   resourceSvg
     .append("g")
@@ -761,6 +771,7 @@ ${d.Schools.toFixed(2)}</span><br/>
     .data([cityAverage])
     .enter()
     .append("path")
+    .attr("id", "cityRadar")
     .attr("d", (d) =>
       radialLine(
         [d.Hospitals, d.Schools, d.Buses, d.Trains].map((v, i) => [
@@ -774,8 +785,16 @@ ${d.Schools.toFixed(2)}</span><br/>
     .attr("stroke-width", 5)
     .attr("fill", "#fee0d2")
     .attr("opacity", 0.8)
-    .on("mouseover", (d) => resourceTooltip.show(d))
-    .on("mouseout", (d) => resourceTooltip.hide());
+    .on("mouseover", (d) => {
+      d3.select("#cityRadar").style("opacity", 1);
+      d3.select("#communityRadar").style("opacity", 0.5);
+      resourceTooltip.show(d);
+    })
+    .on("mouseout", (d) => {
+      d3.select("#cityRadar").style("opacity", 0.8);
+      d3.select("#communityRadar").style("opacity", 1);
+      resourceTooltip.hide();
+    });
 
   resourceSvg
     .append("g")
