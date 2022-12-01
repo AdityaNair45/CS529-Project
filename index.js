@@ -30,6 +30,12 @@ let busStopsData;
 let hospitalsData;
 let schoolsData;
 let trainsData;
+
+let busStopsCount = new Map();
+let trainsCount = new Map();
+let schoolsCount = new Map();
+let hospitalsCount = new Map();
+
 const allCategories = [
   {
     value: "White",
@@ -92,6 +98,7 @@ const loadAllFiles = async () => {
   schoolsData = await d3.csv("Datasets/Schools_Preprocessed.csv");
   trainsData = await d3.csv("Datasets/Train_Preprocessed.csv");
 
+  calculateResources();
   loadMap();
 
   $(document).ready(function () {
@@ -181,6 +188,7 @@ const loadMap = async () => {
       const toolTipObj = {
         communityArea: d.properties.community,
         population: chicagoRaceData[d.properties.area_numbe - 1][selectedRace],
+        areaNumber: d.properties.area_numbe,
       };
       mapToolTip.show(toolTipObj);
     })
@@ -249,7 +257,7 @@ const zoomOnClick = (d) => {
     );
 
   selectedCommunityId = d.properties.area_numbe;
-
+  selectedCommunityArea = d.properties.community;
   if (addResources) {
     if (selectedCommunityAreas.length == 3) {
       selectedCommunityAreas.shift();
@@ -263,7 +271,7 @@ const zoomOnClick = (d) => {
     console.log(selectedCommunityAreas);
     addResourcesToMap();
     renderRaceDistribution(selectedCommunityAreas);
-    renderResourceDistribution(selectedCommunityId);
+    renderResourceDistribution(selectedCommunityId, selectedCommunityArea);
   } else {
     svg.selectAll("path").attr("fill", (d) => {
       const community_area = d.properties.area_numbe;
@@ -497,7 +505,7 @@ function renderRaceDistribution(array) {
           .attr("y", (d) => yScale(d.y))
           .attr("width", 15)
           .attr("height", (d) => yScale(0) - yScale(d.y))
-          .attr("fill", (d, i) => "#1F77B4FF")
+          .attr("fill", (d, i) => "#3182bd")
           .on("mouseover", function (d, i) {
             tooltip.show(d, this);
             d3.select(this).attr("opacity", 0.5);
@@ -532,7 +540,7 @@ function renderRaceDistribution(array) {
           .attr("y", (d) => yScale(d.y))
           .attr("width", 15)
           .attr("height", (d) => yScale(0) - yScale(d.y))
-          .attr("fill", (d, i) => "#F77F0EFF")
+          .attr("fill", (d, i) => "#dd1c77")
           .on("mouseover", function (d, i) {
             tooltip.show(d, this);
             d3.select(this).attr("opacity", 0.5);
@@ -567,7 +575,7 @@ function renderRaceDistribution(array) {
           .attr("y", (d) => yScale(d.y))
           .attr("width", 15)
           .attr("height", (d) => yScale(0) - yScale(d.y))
-          .attr("fill", (d, i) => "#2CA02CFF")
+          .attr("fill", (d, i) => "tomato")
           .on("mouseover", function (d, i) {
             tooltip.show(d, this);
             d3.select(this).attr("opacity", 0.5);
@@ -635,23 +643,64 @@ const rad2deg = (angle) => {
   return (angle * 180) / PI;
 };
 
-const renderResourceDistribution = (selectedCommunityId) => {
+const renderResourceDistribution = (selectedCommunityId, selectedCommunityArea) => {
   if (resourceSvg) {
     resourceSvg.selectAll("*").remove();
   }
+
+  const resourceTooltip = d3
+    .tip()
+    .attr("class", "d3-tip")
+    // .html("<p>This is a SVG inside a tooltip:</p><div id='tipDiv'></div>");
+    .html(function (d) {
+      return `<div class = 'd3-tip' style='background:#E5E8E8;font-size: small; border-width: 2px; border-style: solid; border-color: black;'><span style='color:black; margin-top: 10px; margin-left: 10px; margin-right: 5px;'><strong>No. of Hospital:</strong> 
+${d.Hospitals.toFixed(2)}</span><br/>
+<span style='color:black; margin-top: 5px; margin-left: 10px; margin-right: 10px'><strong>No. of Bus Stops:</strong> 
+${d.Buses.toFixed(2)}</span><br/>
+<span style='color:black; margin-top: 5px; margin-left: 10px; margin-right: 10px'><strong>No. of Train Stations:</strong> 
+${d.Trains.toFixed(2)}</span><br/>
+<span style='color:black; margin-top: 5px; margin-left: 10px; margin-right: 10px'><strong>No. of Schools:</strong> 
+${d.Schools.toFixed(2)}</span><br/>
+    </div>
+        `;
+    });
+
   let selectedCommunity = chicagoRaceData.filter(
     (d) => d.COMMAREA == selectedCommunityId
   );
-
+  console.log(selectedCommunityId);
+  console.log(selectedCommunity);
   data = selectedCommunity[0];
 
-  var temp = Object.values(data).slice(11, 15);
-  var min = Math.min.apply(Math, temp);
-  var max = Math.max.apply(Math, temp);
+  const resourceObj = {
+    Hospitals: hospitalsCount.get(parseInt(selectedCommunityId)),
+    Schools: schoolsCount.get(parseInt(selectedCommunityId)),
+    Buses: busStopsCount.get(parseInt(selectedCommunityId)),
+    Trains: trainsCount.get(parseInt(selectedCommunityId)),
+  };
+
+  const cityAverage = {
+    Hospitals: hospitalsCount.get("Average"),
+    Schools: schoolsCount.get("Average"),
+    Buses: busStopsCount.get("Average"),
+    Trains: trainsCount.get("Average"),
+  };
+
+  let resourceMin = Math.min.apply(Math, Object.values(resourceObj));
+  let resourceMax = Math.max.apply(Math, Object.values(resourceObj));
+
+  let cityMin = Math.min.apply(Math, Object.values(cityAverage));
+  let cityMax = Math.max.apply(Math, Object.values(cityAverage));
+
+  var temp = Object.values(cityAverage);
+  var min = Math.min(resourceMin, cityMin);
+  var max = Math.max(resourceMax, cityMax);
   keys = ["Hospital", "School", "Bus", "Train"];
   console.log(data);
   const r = 200;
   const margin = { left: 30, top: 30, right: 30, bottom: 30 };
+
+  console.log(resourceObj);
 
   resourceSvg = d3.select("#resourceVisualization");
   resourceSvg.attr(
@@ -665,11 +714,11 @@ const renderResourceDistribution = (selectedCommunityId) => {
   const dimensions = keys;
 
   const radialLine = d3.lineRadial();
-
   const yScale = d3.scaleLinear().range([0, r]).domain([min, max]);
 
-  const ticks = [2.5, 5, 7.5, 10];
-
+  // const ticks = [2.5, 5, 7.5, 10];
+  let ticks = d3.range(min, max, (max - min) / 3);
+  ticks = [...ticks, max];
   dimensions.forEach((dimension, i) => {
     const g = resourceSvg
       .append("g")
@@ -684,10 +733,11 @@ const renderResourceDistribution = (selectedCommunityId) => {
       .attr("transform", `translate(0, -${r + 10})`);
   });
 
+  resourceSvg.call(resourceTooltip);
   resourceSvg
     .append("g")
     .selectAll("path")
-    .data([data])
+    .data([resourceObj])
     .enter()
     .append("path")
     .attr("d", (d) =>
@@ -701,7 +751,31 @@ const renderResourceDistribution = (selectedCommunityId) => {
     .attr("transform", `translate(${r}, ${r})`)
     .attr("stroke", "SteelBlue")
     .attr("stroke-width", 5)
-    .attr("fill", "rgba(70, 130, 180, 0.3)");
+    .attr("fill", "rgba(70, 130, 180, 0.3)")
+    .on("mouseover", (d) => resourceTooltip.show(d))
+    .on("mouseout", (d) => resourceTooltip.hide());
+
+  resourceSvg
+    .append("g")
+    .selectAll("path")
+    .data([cityAverage])
+    .enter()
+    .append("path")
+    .attr("d", (d) =>
+      radialLine(
+        [d.Hospitals, d.Schools, d.Buses, d.Trains].map((v, i) => [
+          (Math.PI * 2 * i) / 4,
+          yScale(v),
+        ])
+      )
+    )
+    .attr("transform", `translate(${r}, ${r})`)
+    .attr("stroke", "#de2d26")
+    .attr("stroke-width", 5)
+    .attr("fill", "#fee0d2")
+    .attr("opacity", 0.8)
+    .on("mouseover", (d) => resourceTooltip.show(d))
+    .on("mouseout", (d) => resourceTooltip.hide());
 
   resourceSvg
     .append("g")
@@ -710,12 +784,45 @@ const renderResourceDistribution = (selectedCommunityId) => {
     .enter()
     .append("path")
     .attr("d", (d) =>
-      radialLine(_.range(7).map((v, i) => [(Math.PI * 2 * i) / 4, yScale(d)]))
+      radialLine(
+        _.range(5).map((v, i) => {
+          console.log([(Math.PI * 2 * (i + 1)) / 4, yScale(d)]);
+          return [(Math.PI * 2 * (i + 1)) / 4, yScale(d)];
+        })
+      )
     )
     .attr("transform", `translate(${r}, ${r})`)
     .attr("stroke", "grey")
     .attr("opacity", 0.5)
     .attr("fill", "none");
+
+  resourceSvg
+    .append("circle")
+    .attr("cx", -15)
+    .attr("cy", 0)
+    .attr("r", 6)
+    .style("fill", "SteelBlue");
+  resourceSvg
+    .append("text")
+    .attr("x", 0)
+    .attr("y", 0)
+    .text(selectedCommunityArea)
+    .style("font-size", "12px")
+    .attr("alignment-baseline", "middle");
+
+  resourceSvg
+    .append("circle")
+    .attr("cx", -15)
+    .attr("cy", 20)
+    .attr("r", 6)
+    .style("fill", "#de2d26");
+  resourceSvg
+    .append("text")
+    .attr("x", 0)
+    .attr("y", 20)
+    .text("City Average")
+    .style("font-size", "12px")
+    .attr("alignment-baseline", "middle");
 };
 
 const communityAreaColor = (community_area) => {
@@ -725,6 +832,39 @@ const communityAreaColor = (community_area) => {
   if (index == -1) {
     return mapColorScale(chicagoRaceData[community_area - 1][selectedRace]);
   } else {
-    return index == 0 ? "red" : index == 1 ? "blue" : "cyan";
+    return index == 0 ? "#3182bd" : index == 1 ? "#dd1c77" : "tomato";
   }
+};
+
+const calculateResources = () => {
+  for (let i = 1; i <= 77; i++) {
+    busStopsCount.set(i, 0);
+    trainsCount.set(i, 0);
+    schoolsCount.set(i, 0);
+    hospitalsCount.set(i, 0);
+  }
+
+  busStopsData.forEach((stop) => {
+    const Id = parseInt(stop.COMM_AREA);
+    busStopsCount.set(Id, busStopsCount.get(Id) + 1);
+  });
+  busStopsCount.set("Average", busStopsData.length / 77);
+
+  trainsData.forEach((stop) => {
+    const Id = parseInt(stop.Comm_Area);
+    trainsCount.set(Id, trainsCount.get(Id) + 1);
+  });
+  trainsCount.set("Average", trainsData.length / 77);
+
+  schoolsData.forEach((stop) => {
+    const Id = parseInt(stop.Comm_Area);
+    schoolsCount.set(Id, schoolsCount.get(Id) + 1);
+  });
+  schoolsCount.set("Average", schoolsData.length / 77);
+
+  hospitalsData.forEach((stop) => {
+    const Id = parseInt(stop.Comm_Area);
+    hospitalsCount.set(Id, hospitalsCount.get(Id) + 1);
+  });
+  hospitalsCount.set("Average", hospitalsData.length / 77);
 };
